@@ -1,0 +1,9 @@
+﻿<?xml version='1.0' encoding='UTF-8'?>
+<Folder Name="Dame_HEALPIX">
+  <ImageSet Generic="False" DataSetType="Sky" BandPass="Visible" Name="Dame_CO" Url="C:\Users\Public\Pictures\tiles\Dame_HEALPIX\{1}\{3}\{3}_{2}.png" BaseTileLevel="0" TileLevels="4" BaseDegreesPerTile="180" FileType=".png" BottomsUp="False" Projection="Toast" QuadTreeMap="" CenterX="0" CenterY="0" OffsetX="0" OffsetY="0" Rotation="0" Sparse="False" ElevationModel="False">
+    <Credits>Original survey published in Dame et al. 2001. Healpix projection completed by lambda project as NASA Goddard Space Flight Center, credited at https://lambda.gsfc.nasa.gov/product/foreground/dameco_map.cfm</Credits>
+    <CreditsUrl>https://lambda.gsfc.nasa.gov/product/foreground/dameco_map.cfm</CreditsUrl>
+    <ThumbnailUrl>C:\Users\Public\Pictures\tiles\dame_healpix.jpg</ThumbnailUrl>
+    <Description />
+  </ImageSet>
+</Folder>

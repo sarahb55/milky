@@ -1,0 +1,817 @@
+<!DOCTYPE html >
+<html>
+<head>
+	<meta charset="utf-8" http-equiv="X-UA-Compatible" content="chrome=1, IE=edge" />
+	<title> Milkway 3D Coverage Tool </title>
+	<script src="http://www.worldwidetelescope.org/scripts/wwtsdk.aspx"></script> 
+	<link href="jquery-ui/jquery-ui.css" rel="stylesheet">
+	<link rel="stylesheet" href="style.css">
+	<script src="grs.js" type="text/javascript"></script> <script src="sorttable.js"></script> 
+	<link rel="stylesheet" href="//code.jquery.com/ui/1.12.0/themes/base/jquery-ui.css">
+	<link rel="stylesheet" href="/resources/demos/style.css">
+	<script src="https://code.jquery.com/jquery-1.12.4.js"></script> <script src="https://code.jquery.com/ui/1.12.0/jquery-ui.js"></script> <script>
+         // declare global Worldwide Telescope object
+         var wwt;
+         // Create variables to hold the changeable settings
+        var bShowCrosshairs = true;
+        var bShowUI = false;
+        var bShowFigures = false;
+        var map;
+	    var layers = new Object();
+	    var points = new Object();
+	    var rnames = ["GRS", "HOPS", "BGPS", "CHIMPS", "CHIMPS", "CORNISH", "COHRS", "CORNISH", "ATLASGAL", "HIGAL", "THRUMMS", "UKIDSS", "RAMPS", "MALT90", "MIPSGAL", "GPIPS", "THOR", "BESSEL"];
+		
+	    var eventListeners = [];
+	    var k;
+	    var bDame = false;
+	    
+ 
+
+         // This function initializes the wwt object and once it is done 
+        // it fires the wwtReady event
+         function initialize() {
+            wwt = wwtlib.WWTControl.initControl("WWTCanvas");
+            wwt.add_ready(wwtReady);
+           
+        }
+         // This function is where you would put your custom code for WWT
+        // following the initForWwt() call
+         function wwtReady() {
+            initForWwt();
+ 
+        }
+        
+         function setVisible(element) {
+       
+	        if (document.getElementById(element).checked) {
+	            for (k in layers[element]) {
+	                wwt.addAnnotation(layers[element][k]);
+	            }
+	        } else {
+	            for (k in layers[element]) {
+	                wwt.removeAnnotation(layers[element][k]);
+	            }
+	        }
+	    }
+	    
+	    function newMarker(ra, dec, color) {
+	        //ra = ra * (-1) + 180;
+	        var circle = wwt.createCircle(true);
+	        circle.setCenter(ra, dec);
+	        circle.set_skyRelative(true);
+	        circle.set_radius(0.2);
+	        circle.set_fillColor(color);
+	        circle.set_lineColor(color);
+	        
+	        
+			
+	        return circle;
+	    }
+	    
+	     function addPoints(points, color, regionname){
+	    	
+	    	 for (var i in points) {
+	           var circle =  newMarker(points[i].RA, points[i].Dec, color);   
+	           	 if(!layers[regionname]){
+					layers[regionname] = new Array(circle);
+				}
+				else{
+					 layers[regionname].push(circle);
+				}
+	      
+	           wwt.addAnnotation(circle);
+	    	  
+	        }
+	        
+	        //var polyL = createWWTPolyLine(color, 3, 1, points, name);
+	        
+	     
+	    
+	    }
+	    
+	    function addPolyLine(points, color, name){
+	    	
+	    	/* for (var i in points) {
+	           var circle =  newMarker(points[i].RA, points[i].Dec, color);     
+	           wwt.addAnnotation(circle);
+	    
+	        }*/
+	        
+	        var polyL = createWWTPolyLine(color, 3, 1, points, name);
+	        
+	     
+	    
+	    }
+	    
+	    function hms(h, m, s) {
+	        h = h + m / 60 + s / 3600;
+	        var d = (h ) * 15;
+	       
+	        return d;
+	    }
+	    function dms(d, m, s) {
+	        if (d < 0) { m = -m; s = -s; }
+	        d = d + m / 60 + s / 3600;
+	        return d;
+	    }
+	    
+	      // A function to create a polyline object
+     function createWWTPolyLine(lineColor, lineWidth, opacity, points, regionname) {
+        var polyline = wwt.createPolyLine(true);
+        if(!layers[regionname]){
+			layers[regionname] = new Array(polyline);
+		}
+        
+        for (var i in points) {
+            polyline.addPoint(points[i].RA, points[i].Dec);
+            if(i % 2 == 0 ){
+            	
+            	polyline = wwt.createPolyLine(true);
+            	polyline.set_lineColor(lineColor);
+        		polyline.set_lineWidth(lineWidth);
+        		polyline.set_opacity(opacity);
+            	polyline.addPoint(points[i].RA, points[i].Dec);
+            	//layers[regionname].push(polyline);
+            	//wwt.addAnnotation(polyline);
+            	layers[regionname].push(polyline);
+            	
+            }
+             
+            
+        }    
+        
+        
+        return polyline;
+    }
+	    
+	    function WWTPolygon(points, strokeColor, strokeWeight, stokeOpacity, fillColor, fillOpacity, regionname) {
+	        var poly = wwt.createPolygon(true);
+
+	        poly.set_lineColor(strokeColor);
+	        poly.set_fillColor(fillColor);
+	        poly.set_lineWidth(strokeWeight);
+	        poly.set_opacity(fillOpacity);
+	        poly.set_label(regionname);
+	   		poly.set_showHoverLabel(true);
+	   		poly.set_id(regionname);
+	        
+	        for (var i in points) {
+	            poly.addPoint(points[i].RA, points[i].Dec);     
+	        }
+	        	  		
+	        return poly;
+	       
+	    } 
+
+	    
+	    function showPoly(regionname, polycolor, name){
+	    
+	    	//layers[regionname] = new Array();
+
+	   		var poly = new WWTPolygon(regions[regionname], polycolor, 1, 1, polycolor, 0.2, regionname);
+	   		var polyL = new createWWTPolyLine(polycolor, 10, 1, polycolor, regions[regionname], name );
+	   	
+	   		
+	   		//wwt.addAnnotation(poly);
+	   		//wwt.addAnnotation(polyL);
+	   		
+	   		
+	   		return poly;
+	   		
+	    
+	    }
+/*	    
+	function FovInc() {
+        var newFov = 1.1 * wwt.get_fov();
+        if (newFov <= 60) {
+            wwt.gotoRaDecZoom(wwt.getRA(), wwt.getDec(), newFov, false);
+        }
+    }
+     function FovDec() {
+        var newFov = wwt.get_fov() / 1.1;
+        if (wwt.get_fov() >= 0.00022910934437488727) {
+            wwt.gotoRaDecZoom(wwt.getRA(), wwt.getDec(), newFov, false);
+        }
+    }    
+    */
+	   
+  
+function FovInc() {
+        var newFov = 1.5 * wwt.get_fov();
+     
+ 
+ 		var savedRA = wwt.getRA();
+ 		var savedDec = wwt.getDec();
+ 		alert(savedRA + ' ' + savedDec);
+	
+        if (newFov <= 60) {
+            wwt.gotoRaDecZoom(savedRA*15,      savedDec, newFov, false); //Galactic coordinates (0,0)
+        }
+     
+    }
+    
+function FovDec() {
+    	var savedRA = wwt.getRA();
+ 		var savedDec = wwt.getDec();
+        var newFov = wwt.get_fov() / 1.5    ;
+        
+        if (wwt.get_fov() >= 0.00022910934437488727) {
+            wwt.gotoRaDecZoom(266.40508920,      -28.93617470, newFov, false); //Galactic coordinates (0,0)
+        }
+   
+         
+    }
+
+         // This is the initialization for Worldwide Telescope
+         function initForWwt() {
+         wwt.loadImageCollection("milky.wtml");
+         wwt.loadImageCollection("Dame_HEALPIX.wtml");
+        
+    	//wwt.add_collectionLoaded(default_layers);
+    	//wwt.add_annotationchangeed(finderScope);
+		 
+		  wwt.setForegroundImageByName("GLIMPSE 360");
+		  wwt.setBackgroundImageByName("2Mass: Imagery (Infrared)");
+		  wwt.setForegroundOpacity(0.0);
+            
+            // add any wwt object settings changes here
+    
+
+            wwt.settings.set_showCrosshairs(bShowCrosshairs);
+        	wwt.settings.set_showGalacticGrid(true);
+            wwt.settings.set_showGalacticGridText(true);
+            wwt.settings.set_galacticMode(true);
+           // wwt.settings.set_showGrid(true);
+           
+            
+            wwt.settings.set_showConstellationBoundries(false);
+            wwt.settings.set_showConstellationFigures(false);
+            
+            var poly1, poly2, poly3, poly4;
+            
+            
+           // poly1 = showPoly('GRS',  "#ff6600");
+            addPolyLine(regions['GRS'],"#ff6600", "GRS");
+         //layers["GRS"].push(poly1);
+          
+        
+            //poly1 = showPoly('HOPS1',  "#ff0000");
+            //poly2 = showPoly('HOPS2',  "#ff0000");
+            
+            addPolyLine(regions['HOPS1'],"#ff000f", "HOPS");
+            addPolyLine(regions['HOPS2'],"#ff000f", "HOPS");
+            //layers["HOPS"].push(poly1);
+            //layers["HOPS"].push(poly2);
+          
+            
+            //poly1 = showPoly('BGPS1', '#669933');
+            //poly2 =showPoly('BGPS2', '#669933');
+            addPolyLine(regions['BGPS1'],'#669933', "BGPS");
+            addPolyLine(regions['BGPS2'],'#669933', "BGPS");
+            //layers["BGPS"].push(poly1, poly2);
+
+            
+          
+            //poly1 = showPoly('CHIMPS', '#006633');
+            addPolyLine(regions['CHIMPS'],'#006633', "CHIMPS");
+            //layers["CHIMPS"].push(poly1);
+            
+            
+            
+        	//poly1 = showPoly('JCMT', "#0033FF");
+            addPolyLine(regions['JCMT'], "#0033FF", "JCMT");
+            //layers["JCMT"].push(poly1);
+            
+            //poly1 = showPoly('COHRS', "#00FFFF");
+            addPolyLine(regions['COHRS'], "#00FFFF", "COHRS" );
+            //layers["COHRS"].push(poly1);
+            
+            //poly1 = showPoly('CORNISH', "#660000");
+            addPolyLine(regions['CORNISH'], "#660000", "CORNISH");
+            //layers["CORNISH"].push(poly1);
+            
+            //poly1 = showPoly('ATLASGAL1', "#006699");
+           // poly2 = showPoly('ATLASGAL2', "#006699");
+            addPolyLine(regions['ATLASGAL1'],"#006699", "ATLASGAL");
+            addPolyLine(regions['ATLASGAL2'],"#006699", "ATLASGAL");
+            //layers["ATLASGAL"].push(poly1, poly2);
+            
+        
+           // poly1 = showPoly('HIGAL1', "#9966FF");
+           // poly2 = showPoly('HIGAL2', "#9966FF");
+            addPolyLine(regions['HIGAL1'],"#9966FF", "HIGAL");
+            addPolyLine(regions['HIGAL2'],"#9966FF", "HIGAL");
+            //layers["HIGAL"].push(poly1);
+            //layers["HIGAL"].push(poly2);
+        	
+          	//poly1 = showPoly('THRUMMS', "#CCCC66");
+            addPolyLine(regions['THRUMMS'], "#CCCC66", "THRUMMS");
+            //layers["THRUMMS"].push(poly1);
+            
+           
+			//addPoints(regions['UKIDSS'],"#990099", "UKIDSS");
+			addPolyLine(regions['UKIDSS_2'],"#990099", "UKIDSS");
+            addPolyLine(regions['UKIDSS_1'],"#990099", "UKIDSS");
+         
+        	//poly1 = showPoly('RAMPS', "#CC6666");
+            addPolyLine(regions['RAMPS'], "#CC6666", "RAMPS");
+           // layers["RAMPS"].push(poly1);
+      
+          	//poly1 = showPoly('MALT90_1', "#993300");
+            //poly2 = showPoly('MALT90_2', "#993300");
+            addPolyLine(regions['MALT90_1'],"#993300", "MALT90");
+            addPolyLine(regions['MALT90_2'],"#993300", "MALT90");
+            //layers["MALT90"].push(poly1, poly2);
+            
+             addPolyLine(regions['GPIPS'], "#990033", "GPIPS");
+            
+    
+       
+       		addPolyLine(regions['MIPSGAL'],"#9999FF", "MIPSGAL");
+       		
+       		addPolyLine(regions['DAME'],"#666600", "DAME");
+       		addPolyLine(regions['THOR'],"#996666", "THOR");
+       		
+       		addPoints(regions['BESSEL'],"#CD853F", "BESSEL");
+        
+        
+            wwt.gotoRaDecZoom(266.40508920,      -28.93617470, wwt.get_fov() / 2.5 , false); 
+            
+         	toggle(this);
+          
+           // wwt.hideUI(!bShowUI);
+            
+        }
+         // A simple function to toggle the settings
+        // This function is called from the checkbox entries setup in the html table
+         function toggleSetting(text) {
+            switch (text) {
+                case 'ShowUI':
+                    bShowUI = !bShowUI;
+                    wwt.hideUI(!bShowUI);
+                    wwt.set_showExplorerUI(bShowUI);
+                    break;
+                 case 'ShowCrosshairs':
+                    bShowCrosshairs = !bShowCrosshairs;
+                    wwt.settings.set_showCrosshairs(bShowCrosshairs);
+                    break;
+                 case 'ShowFigures':
+                    bShowFigures = !bShowFigures;
+                    wwt.settings.set_showConstellationFigures(bShowFigures);
+                    break;
+            }
+        }
+         // A function to change the view to different constellations
+        // Note the fov set to 60 (maximum view distance)
+        // This function is called from the button entries in the html table
+function toggle(source){
+  checkboxes = document.getElementsByName('foo');
+
+  for(var i=0, n=checkboxes.length;i<n;i++) {
+    if(source.checked){
+    	checkboxes[i].checked = true;
+   
+    }
+    else{
+    	checkboxes[i].checked = false;
+    	
+    }
+    wwt.setBackgroundImageByName("2Mass: Imagery (Infrared)");
+  	wwt.setForegroundOpacity(0.0);
+  
+  }
+  
+  if(source.checked){
+  	for (r in rnames){
+    		setVisible(rnames[r]);
+    	}
+    	
+    wwt.setBackgroundImageByName("2Mass: Imagery (Infrared)");
+  	wwt.setForegroundOpacity(100.0);
+    	
+  }
+  else{
+  	wwt.clearAnnotations();
+  	wwt.setBackgroundImageByName("2Mass: Imagery (Infrared)");
+  	wwt.setForegroundOpacity(0.0);
+  }
+  
+  
+} 
+
+
+
+function setBackground(backname, element){
+  
+  	
+  	if(document.getElementById(element).checked){
+  
+  	 	wwt.setBackgroundImageByName(backname);
+  	 }
+  	 else{
+  	 	wwt.setBackgroundImageByName("2Mass: Imagery (Infrared)");
+  	 
+  	 }
+  	 
+  
+  }
+  
+  
+  function setForeground(backname, element){
+  
+  
+  	
+  	if(document.getElementById(element).checked){
+  
+  	 	wwt.setForegroundOpacity(100.0);
+  	 }
+  	 else{
+  	 	wwt.setForegroundOpacity(0.0);
+  	 
+  	 }
+  
+  }
+  
+  
+  $(function() {
+	 $("#slider-opacity").slider({
+        min: 0,
+        max: 100,
+        value: 50,
+        slide: function(event, ui) {
+        	wwt.setForegroundImageByName("GLIMPSE 360");
+            wwt.setForegroundOpacity(ui.value);
+
+        }
+    });
+
+
+});  
+
+  $(function() {
+	 $("#slider-opacity-dame").slider({
+        min: 0,
+        max: 100,
+        value: 50,
+        slide: function(event, ui) {
+        	wwt.setForegroundImageByName("Dame_CO");
+            wwt.setForegroundOpacity(ui.value);
+
+        }
+    });
+
+
+});  
+
+  $(function() {
+	 $("#slider-opacity-wise").slider({
+        min: 0,
+        max: 100,
+        value: 50,
+        slide: function(event, ui) {
+        	wwt.setForegroundImageByName("WISE All Sky (Infrared)");
+            wwt.setForegroundOpacity(ui.value);
+
+        }
+    });
+
+
+});  
+
+
+       
+     </script> 
+</head>
+<body onload="initialize()">
+<div id="wrapper">
+
+<!-- The body section creates a table with two columns. The first contains the -->
+<!-- canvas tag that is the WWT web client target. And the second a table within-->
+<!-- the table, containing some buttons and checkboxes.-->
+	<img src="images/milkway.jpeg" align="left" alt="Milky Way" height="80" /> 
+	<h1>
+		Milky Way 3D 
+	</h1>
+	<h2>
+		Galactic Plane Coverage Tool 
+	</h2>
+	<br />
+	<p>
+MilkyWay3D.org is a tool intended to organize and curate links to
+information about data sets relevant to our 3D understanding of the
+Milky Way. For any given longitude range, we provide the means to
+determine the available surveys, their overlapping footprint, and the
+type of data each provides. Information about each dataset, including
+how to access the data, their hallmark publications, and their
+principal investigators, is available at the <a href="https://dataverse.harvard.edu/dataverse/MilkyWay3D">Milky Way 3D Dataverse</a>.
+All the data can be loaded, “linked”, and explored using the new 3D
+visualization software package Glue, available for download at
+<a href="http://glueviz.org/en/stable/" target="_blank">glueviz.org</a>!
+	
+	</p>
+	<table bgcolor="black" cellpadding="10">
+	<tr>
+	<td colspan="3"> 
+	
+	</td>
+	</tr>
+		<tr>
+			<td colspan="3"> 
+			<div id="WorldWideTelescopeControlHost">
+				<div id="WWTCanvas" style="width:1150px; height:400px; border-style: none; border-width: 5px;padding: 5px 5px;">
+				</div>
+			</div>
+			</td>
+			</tr>
+			<tr>
+			<td style="width:1030px;text-align: left;border-bottom: none;">
+			<font color="white">This is an interactive coverage tool of surveys of the galactic plane created with the <a href="http://www.worldwidetelescope.org/Developers/Html5sdk" target="_blank">AAS WorldWide Telescope API,</a> and <a href="http://www.worldwidetelescope.org">WorldWide Telescope</a>. To view the coverage of a region, click on the check box or slider in the first column of the table below. You can drag your mouse to pan or zoom in the window. Information on where to find the data in the regions may be found by clicking on the region name or the &#9733;. Table columns may be sorted by clicking on the table header. </font>
+			</td>
+			</tr>
+			<tr>
+			<td>
+			 <input type="button" id="inc" value="Zoom Out" onclick="FovInc()"/>
+   			 <input type="button" id="dec" value="Zoom In" onclick="FovDec()"/>
+   			 <input type="button" id="dec" value="Reset/Center" onclick="initForWwt()"/>
+			</td>
+			</tr>
+	</table>
+	<p>
+		
+	</p>
+
+<div id="datatableholder">
+	<table>
+		<tr>
+			<th width="330"> </th>
+			<th width="490" align="center"> Extended Observations </th>
+			<th width="225"> Catalogs and Pointed Surveys </th>
+		</tr>
+	</table>
+	<table class="sortable" id="datatable">
+		<thead>
+		<tr>
+			<th width="15">  View Region </th>
+			<th width="160"> Link to Survey </th>
+			<th width="160"> Wavelength </th>
+			<th width="160"> Continuum (2D) </th>
+			<th width="150"> Spectral Line (3D) </th>
+			<th width="190"> Source-Based Lists </th>
+			<th width="150"> Spectral Line </th>
+		</tr>
+		</thead>
+		<tbody>
+		<tr>
+			<td bgcolor="#996666"> 
+			<input id="THOR" type="checkbox" checked="true" onchange="setVisible('THOR');" name="foo" />
+			</td>
+			<td> <a href="https://dataverse.harvard.edu/dataverse/THOR" title="The THOR survey is a galactic plane survey covering 15&deg; &lt; l &lt; 67&deg; and b &lt; |1&deg;|. It consists of HI 21 cm observations, 20 recombination lines and 1-2 GHz continuum data at a 20&quot;&quot; spatial resolution. One of its main science goals is understanding the dynamics of the interstellar medium and how clouds transition from the atomic to the molecular phase."> <font color="#996666"> THOR </font> </a> </td>
+			<td> <font color="white"> A </font> <font color="#996666"> 21 cm, 300 mm, 174-186 mm </font> </td>
+			<td name="Continuum (2D)"> 
+			</td>
+			<td name="Spectral Line (3D)"> <a href="https://dataverse.harvard.edu/dataset.xhtml?persistentId=doi:10.7910/DVN/1ZJGAO" title="This dataset consists of extended spectral line observations taken by the Very Large Array (VLA), over l = 15&deg; &minus; 67&deg;, |b| &le; 1&deg;. There are a variety of data products available. The first includes HI 21 cm observations with a bandwidth of 2 MHz and a channel width of 1.953 kHz. This yields a velocity range of &plusmn;200 km/s and a spectral resolution of 0.41 km/s. Additional data products available include 4 OH lines (1612, 1665, 1667 and 1720 MHz) and 19 H&alpha; radio recombination lines."> <font color="#996666"> &#9733; </font> </a> </td>
+			<td name="Source-Based Lists (1D)"> </td>
+			<td name="Spectral Line (2D)"> </td>	
+		</tr>
+
+
+<tr>
+			<td bgcolor="#CD853F"> 
+			<input id="BESSEL" type="checkbox" checked="true" onchange="setVisible('BESSEL');" name="foo" />
+			</td>
+			<td> <a href=" https://dataverse.harvard.edu/dataverse/BESSEL" title="The BeSSeL Survey is a Very Long Baseline Array (VLBA) key science project whose goal is to study the kinematics and spiral structure of the Milky Way Galaxy. They do this by measuring the trigonometric parallaxes and proper motions of masers associated with high-mass star forming regions throughout the Galaxy. The main maser emission lines include methanol (at 12.2 GHz) and water (at 22 GHz). Because the distance measurements produced by trigonometric parallax rely solely on geometry (and not assumptions about luminosity, extinction, etc), the BeSSeL survey has produced the most accurate measurements of R_0 (distance to the Galactic center) and Θ_0 (the circular rotation speed) to date."> <font color="#CD853F"> BESSEL </font> </a> </td>
+			<td> <font color="white"> Aaa </font> <font color="#CD853F">1-3 cm </font> </td>
+			<td name="Continuum (2D)"> 
+			</td>
+			<td name="Spectral Line (3D)">  </td>
+			<td name="Source-Based Lists (1D)"> <a href=" https://dataverse.harvard.edu/dataset.xhtml?persistentId=doi:10.7910/DVN/1BAZA7" title="This dataset consists of over 100 trigonometric parallax and proper motion measurements for masers associated with high-mass star forming regions. Maser lines of choice include both methanol and water, at frequencies of 12 and 22 GHz, respectively. In addition to the 100+ BeSSeL sources, the catalog also includes maser values taken from the literature. The coordinates, parallaxes, proper motions, velocities, and publication reference are available as a data product on the BeSSeL website."> <font color="#CD853F"> &#9733; </font> </a></td>
+			<td name="Spectral Line (2D)"> </td>	
+		</tr>
+		<tr>
+			
+			
+			
+			
+			</td>
+			<td bgcolor="#CC6666"> 
+			<input id="RAMPS" type="checkbox" checked="true" onchange="setVisible('RAMPS');" name="foo" />
+			</td>
+			<td> <a href="https://dataverse.harvard.edu/dataverse/RAMPS" title="The Radio Ammonia Midplane Survey (RAMPS) is a program to survey 60 sq. deg. of the Galactic Plane at 1.3 cm using the Green Bank Telescope. Currently in pilot mode (March 2016), the program will map from l=10&deg; - 40&deg; and b= -0.5&deg; - 0.5&deg;. The RAMPS survey is a successor to the HOPS survey and will cover multiple ammonia transitions at higher resolution and sensitivity than its predecessor. The main science goal of RAMPS includes characterizing the Galactic population of dense star forming gas through a systematic analysis of its properties (e.g. column densities, radial velocities, gas temperatures)."> <font color="#CC6666"> RAMPS* </font> </a> </td>
+			<td> <font color="white"> Aab </font> <font color="#CC6666"> 1 cm </font> </td>
+			<td name="Continuum (2D)"> </td>
+			<td name="Spectral Line (3D)"> <a href="https://dataverse.harvard.edu/dataset.xhtml?persistentId=doi:10.7910/DVN/NMDU7W" title="This dataset consists of extended spectral line observations taken with the K-band Focal Plane Array on the Green Bank Telescope (GBT). Lines of study include NH3 (1,1); (2,2); (3,3); (4,4); (5,5), H2O masers, and CH3OH masers. This is a blind survey covering 10&deg; &lt; l &lt; 40&deg; and b &lt; |0.5&deg;|. "> <font color="#CC6666"> &#9733; </font> </a> </td>
+			<td name="Source-Based Lists (1D)"> </td>
+			<td name="Spectral Line (2D)"> 
+		</tr>
+		<tr>
+			<td bgcolor="#660000"> 
+			<input id="CORNISH" type="checkbox" checked="true" onchange="setVisible('CORNISH');" name="foo" />
+			</td>
+			<td> <a href="https://dataverse.harvard.edu/dataverse/CORNISH" title="The Coordinated Radio and Infrared Survey for High-Mass Star Formation (CORNISH) is an arcsecond-resolution radio continuum survey covering 10&deg;&lt; l &lt; 65&deg; and |b| &lt; 1&deg; at 5 GHz. With an overlapping footprint, it is intended to be the radio counterpart to mid-IR GLIMPSE/MIPSGAL surveys and the near-IR UKIDSS survey of the Galactic plane. One of its main science goals include better characterization of ultra-compact HII regions, massive young stellar objects, and evolved OB stars in the plane of the galaxy."> <font color="#660000"> CORNISH* </font> </a> </td>
+			<td> <font color="white"> B </font> <font color="#660000"> 60 mm </font> </td>
+			<td name="Continuum (2D)"> <a href="https://dataverse.harvard.edu/dataset.xhtml?persistentId=doi:10.7910/DVN/EUKSQE" title="This dataset includes extended radio continuum observations at 5 GHz towards the first Galactic quadrant of the Milky Way. The region is broken up into 20x20 arcminute tiles"> <font color="#660000"> &#9733; </font> </a> </td>
+			<td name="Spectral Line (3D)"> </td>
+			<td name="Source-Based Lists (1D)"> <a href="https://dataverse.harvard.edu/dataset.xhtml?persistentId=doi:10.7910/DVN/ZUQ6C7" title="This dataset consists of 3000+ radio emission sources detected in the CORNISH images. The CORNISH team applied an automated source finding procedure to identify a new, uniform catalog of compact radio emission (from HII regions, planetary nebulae, and radio galaxies) with a peak intensity above 7&sigma;."> <font color="#660000"> &#9733; </font> </a> </td>
+			<td name="Spectral Line (2D)"> </td>
+		</tr>
+		<tr>
+			<td bgcolor="#FF0000"> 
+			<input id="HOPS" type="checkbox" checked="true" onchange="setVisible('HOPS');" name="foo" />
+			</td>
+			<td> <a href="https://dataverse.harvard.edu/dataverse/HOPS" title="The H2O Southern Galactic Plane Survey (HOPS) has mapped a 100 degree strip of the Galactic plane (-70&deg; &gt; l &gt; 30&deg;, | b | &lt; 0.5&deg;) at 12 mm wavelengths. Thermal lines of interest include the NH3 J,K = (1,1) and (2,2) transitions, which probe molecular cloud densities on the order of n &gt; 10 4 cm -3. The spatial resolution of the survey is 2&rsquo;, and the velocity resolution is ~0.42 km/s."> <font color="#FF0000"> HOPS </font> </a> </td>
+			<td> <font color="white"> C </font> <font color="#FF0000"> 12 mm </font> </td>
+			<td name="Continuum (2D)"> </td>
+			<td name="Spectral Line (3D)"> <a href="https://dataverse.harvard.edu/dataset.xhtml?persistentId=doi:10.7910/DVN/LTZFAX" title="This dataset consists of extended spectral line mapping of NH3 (1,1), NH3 (2,2), and H2O masers. The 100 sq. deg. survey region is broken up into eleven strips, and all cubes are available for download at the HOPS data product page."> <font color="#FF0000"> &#9733; </font> </a> </td>
+			<td name="Source-Based Lists (1D)"> </td>
+			<td name="Spectral Line (2D)"> <a href="https://dataverse.harvard.edu/dataset.xhtml?persistentId=doi:10.7910/DVN/LTZFAX" title="This dataset consists of three catalogs derived from mining the HOPS extended spectral line observations with the ATNF DUCHAMP source finding algorithm. The three catalogs cover the same spectral lines as the extended observations (NH3 (1,1), NH3 (2,2), and H2O masers) and consist of 669 dense molecular clouds. It is 100% complete at the 5&sigma; detection limit of the survey."> <font color="#FF0000"> &#9733; </font> </a> </td>
+		</tr>
+		<tr>
+		<tr>
+			<td bgcolor="#FF6600"> 
+			<input id="GRS" type="checkbox" checked="true" onchange="setVisible('GRS');" name="foo" />
+			</td>
+			<td> <a href="https://dataverse.harvard.edu/dataverse/GRS" title="The Galactic Ring Survey maps the 13CO J=1-0 transition in the first Galactic quadrant (18&deg; &lt;= l &lt;= 55.7&deg; and -1&deg; &lt;= b &lt;= +1&deg;). It has an angular resolution of 46&rdquo; and a velocity resolution of 0.21 km/s, with almost 2 million spectra. Its main science goal is understanding the kinematics, structure, and astrochemistry of the 5 kpc ring. "> <font color="#FF6600"> GRS </font> </a> </td>
+			<td> <font color="white"> D </font> <font color="#FF6600"> 3 mm </font> </td>
+			</td>
+			<td name="Continuum (2D)"> </td>
+			<td name="Spectral Line (3D)"> <a href="https://dataverse.harvard.edu/dataset.xhtml?persistentId=doi:10.7910/DVN/OBOBUL" title="The GRS dataset consists of extended 13CO (1-0) spectral line mapping in the first Galactic quadrant of the Milky Way. Users can retrieve individual l,b,v cube cutouts in a specified velocity range at the GRS data site."> <font color="#FF6600"> &#9733; </font> </a> </td>
+			<td name="Source-Based Lists (1D)"> </td>
+			<td name="Spectral Line (2D)"> </td>
+		</tr>
+		<tr>
+			<td bgcolor="#993300"> 
+			<input id="MALT90" type="checkbox" checked="true" onchange="setVisible('MALT90');" name="foo" />
+			</td>
+			<td> <a href="https://dataverse.harvard.edu/dataverse/MALT90" title="The Millimetre Astronomy Legacy Team 90 GHz (MALT90) Survey is a program targeting sixteen molecular line transitions which typically trace critical densities on the order of 10^5 cm^-3. Particular lines of interest include N2H+, HCO+, HCN, and HNC, along with isotopologues like H13CO+. The velocity resolution of the survey is ~0.11 km/s, while the angular resolution is 38&rdquo;. In total, data towards 2012 high-mass dense cores are now available, including reduced (l,b,v) cubes for all 16 emission lines observed."> <font color="#993300"> MALT90 </font> </a> </td>
+			<td> <font color="white"> D </font> <font color="#993300"> 3 mm </font> </td>
+			<td name="Continuum (2D)"> </td>
+			<td name="Spectral Line (3D)"> </td>
+			<td name="Source-Based Lists (1D)"> </td>
+			<td name="Spectral Line (2D)"> <a href="https://dataverse.harvard.edu/dataset.xhtml?persistentId=doi:10.7910/DVN/OLPYKN" title="The dataset consists of targeted spectral line observations towards 2000+ high-mass dense cores. For each dense core, (l,b,v) cubes and moment maps in sixteen emission lines are available. All cubes are available for download at the Australia Telescope Online Archive, but an account must be created to access the data."> <font color="#993300"> &#9733; </font> </td>
+			</font> 
+		</tr>
+		<tr>
+			<td bgcolor="#CCCC66"> 
+			<input id="THRUMMS" type="checkbox" checked="true" onchange="setVisible('THRUMMS');" name="foo" />
+			</td>
+			<td> <a href="https://dataverse.harvard.edu/dataverse/THRUMMS" title="The Three-mm Ultimate Mopra Milky Way Survey (ThrUMMS) maps the fourth Galactic quadrant (|b|&lt;1.0&deg;) with the J=1&rarr;0 lines of 12CO, 13CO, C18O, and CN near 112 GHz. It has a spatial resolution of ~1&rsquo; and a velocity resolution of 0.3 km/s. Its main science goals include understandings the neutral/molecular ISM connection, the physical state of Giant Molecular Clouds, and large-scale Galactic structure and kinematics. "> <font color="#CCCC66"> THRUMMS </font> </a> </td>
+			<td> <font color="white"> D </font> <font color="#CCCC66"> 3 mm </font> </td>
+			<td name="Continuum (2D)"> </td>
+			<td name="Spectral Line (3D)"> <a href="https://dataverse.harvard.edu/dataset.xhtml?persistentId=doi:10.7910/DVN/CCCKQB" title="This dataset consists of extended spectral line observations in the fourth Galactic quadrant of the Milky Way. Targeted lines include 12CO,13CO,C18O,and CN. Individual spectral cubes can be downloaded at the ThrUMMS data release bank." <font color="#CCCC66"> &#9733; </font> </a> </td>
+			<td name="Source-Based Lists (1D)"> </td>
+			<td name="Spectral Line (2D)"> </td>
+		</tr>
+		<tr>
+			<td bgcolor="#666600"> 
+			<div id="slider-opacity-dame">
+			<!--input id="DAME" type="checkbox" checked="true" onchange="showDame();" name="foo" /-->
+			</td>
+			<td> <a href="https://dataverse.harvard.edu/dataverse/rtdc" title="The whole-Galaxy CO survey presented in Dame et al. (2001) is a composite of 37 separate surveys."> <font color="#666600"> Dame CO </font> </a> </td>
+			<td> <font color="white"> Da </font> <font color="#666600"> 2.6 mm </font> </td>
+			<td name="Continuum (2D)"> </td>
+			<td name="Spectral Line (3D)"><a href="https://dataverse.harvard.edu/dataverse/rtdc" title="The whole-Galaxy CO survey presented in Dame et al. (2001) is a composite of 37 separate surveys that are described and numbered."> <font color="#666600"> &#9733; </font> </a>  </td>
+			<td name="Source-Based Lists (1D)"> </td>
+			<td name="Spectral Line (2D)"> </td>
+			</font> 
+		</tr>
+		<tr>
+			<td bgcolor="#669933"> 
+			<input id="BGPS" type="checkbox" checked="true" onclick="setVisible('BGPS');" name="foo" />
+			</td>
+			<td> <a href="https://dataverse.harvard.edu/dataverse/BGPS" title="The Bolocam Galactic Plane Survey (BGPS) is a 1.1 mm survey of dust emission covering -10&deg; &lt;= l &lt;= 90&deg; and |b|&lt;= 0.5&deg;. Version 2 also includes additional coverage of 20 deg^2 in the 3rd and 4th quadrants. The effective angular resolution of the survey is 33&rdquo;. Additional spectral line follow-up observations towards dense clouds in the survey were also carried out using the Heinrich Hertz Submillimeter Telescope. The 3-2 transition of HCO+ and N2H+ were targeted, with an effective velocity resolution of ~1 km/s."> <font color="#669933"> BGPS </font> </a> </td>
+			<td> <font color="white"> E </font> <font color="#669933"> 1 mm </font> </td>
+			<td name="Continuum (2D)"> <a href="https://dataverse.harvard.edu/dataset.xhtml?persistentId=doi:10.7910/DVN/VDIGGM" title="This dataset consists of 1.1 mm dust continuum observations with an effective resolution of 33&quot;&quot;. It covers 192 sq. degree of the Galactic plane, mainly towards the first quadrant, though there is approximately 20 sq. deg of observations taken in the 3rd and 4th quadrants (detailed in Ginsburg et al. 2013). Images can be retrieved through an image cutout service. Available image products include calibrated maps (MAP), maps of integration times per pixel (NHITSMAP), and maps of the residual time series (NOISEMAP). "> <font color="#669933"> &#9733; </font> </a> </td>
+			<td name="Spectral Line (3D)"> </td>
+			<td name="Source-Based Lists (1D)"> <a href="https://dataverse.harvard.edu/dataset.xhtml?persistentId=doi:10.7910/DVN/TQHAJI" title="This dataset consists of 8000+ compact sources extracted from the BGPS extended continuum 1.1 mm observations. The sources were obtained using a custom extraction algorithm called &lt;i&gt;Bolocat&lt;/i&gt;, which is tailored to the BGPS maps. According to Rosolowsky et al. 2010, these sources are best characterized as dense molecular clumps. "> <font color="#669933"> &#9733; </font> </a> </td>
+			<td name="Spectral Line (2D)"> <a href="https://dataverse.harvard.edu/dataset.xhtml?persistentId=doi:10.7910/DVN/VNDTFT" title="This dataset consists of spectroscopic follow-up observations towards dense BGPS molecular clumps derived from the 1.1 mm dust continuum survey. Observations were obtained using the Heinrich Hertz Telescope simultaneously in HCO+ (J = 3-2) and N2H+ (J = 3-2). In total, over 6000 clumps have spectral line observations, with the results published in Schlingman et al. 2011 and Shirley et al. 2013."> <font color="#669933"> &#9733; </font> </a> </td>
+		</tr>
+		<tr>
+			<td bgcolor="#006633"> 
+			<input id="CHIMPS" type="checkbox" checked="true" onchange="setVisible('CHIMPS');" name="foo" />
+			</td>
+			<td> <a href="https://dataverse.harvard.edu/dataverse/CHIMPS" title="The 13CO/C18O (J = 3 &rarr; 2) Heterodyne Inner Milky Way Plane Survey (CHIMPS) is a high-resolution spectral survey covering |b| &le; 0.5&deg; and 28&deg; &#x2272; l &#x2272; 46&deg;. It has an angular resolution of 15&rdquo; and consists of 0.5 km/s velocity channels. Because of its rarer isotopologues the survey probes a higher critical density of CO (&gt;10^4 cm^-3) at temperatures less than 20 K. It acts as a good complement to the JCMT and Hi-GAL surveys of the Galactic plane due to similar spatial resolution."> <font color="#006633"> CHIMPS </font> </a> </td>
+			<td> <font color="white"> E </font> <font color="#006633"> 1 mm </font> </td>
+			<td name="Continuum (2D)"> </td>
+			<td name="Spectral Line (3D)"> <a href="https://dataverse.harvard.edu/dataset.xhtml?persistentId=doi:10.7910/DVN/APMCFQ"> <font color="#006633" title="This dataset consists of extended spectral line observations for the 13CO and C18O (J = 3 &rarr; 2) transitions. The data available consists of an 18 sq. deg region in the longitude range 28&deg; &#x2272; l &#x2272; 46&deg;. Data products are available in fits format mainly as mosaics, and can be downloaded in ~1 sq. deg. tiles. Integrated l-b intensity maps, along with position-velocity maps, are also available. All the data can be downloaded from CANFAR data archive."> &#9733; </font> </a> </td>
+			<td name="Source-Based Lists (1D)"> </td>
+			<td name="Spectral Line (2D)"> </td>
+		</tr>
+		<tr>
+			<td bgcolor="#00FFFF"> 
+			<input id="COHRS" type="checkbox" checked="true" onchange="setVisible('COHRS');" name="foo" />
+			</td>
+			<td> <a href="https://dataverse.harvard.edu/dataverse/COHRS" title="The CO High-Resolution Survey (COHRS) maps the 12CO (J = 3 &rarr; 2) transition in the Galactic plane, between |b| &lt;= 0. 5&deg; and 10&deg; &lt; l &lt; 65&deg;. It has a spatial resolution of 16&rdquo; and a velocity resolution of 1 km/s. It is intended as a complement to the BGPS, ATLASGAL Hi-GAL, and JCMT surveys of the Galactic plane. The 12CO (J = 3 &rarr; 2) is a particularly good tracer of the warmer (10-50 K) material of moderate density (10^4 cm-3) around cores. It is also a good tracer of outflow activity, which should aid morphological studies of bubbles and filaments."> <font color="#00FFFF"> COHRS </font> </a> </td>
+			<td> <font color="white"> E </font> <font color="#00FFFF"> 1 mm </font> </td>
+			<td name="Continuum (2D)"> </td>
+			<td name="Spectral Line (3D)"> <a href="https://dataverse.harvard.edu/dataset.xhtml?persistentId=doi:10.7910/DVN/Q44Y7K" title="This dataset consists of extended, high-resolution spectral line observations in the 12CO (J = 3 → 2) transition towards the first Galactic quadrant of the Milky Way. Data products available include reduced (l,b,v) cubes, integrated intensity maps, and position-velocity maps. All are available for download at the CANFAR data archive.">
+			<font color="#00FFFF"> &#9733; </font> </a>
+			</td>
+			<td name="Source-Based Lists (1D)"> </td>
+			<td name="Spectral Line (2D)"> </td>
+		</tr>
+		<tr>
+			<td bgcolor="#006699"> 
+			<input id="ATLASGAL" type="checkbox" checked="true" onchange="setVisible('ATLASGAL');" name="foo" />
+			</td>
+			<td> <a href="https://dataverse.harvard.edu/dataverse/ATLASGAL" title="The APEX Telescope Large Area Survey of the Galaxy (ATLASGAL) maps 400 sq. deg. of the inner galaxy (|l| &lt; 60&ordm;, |b| &lt; 1.5&ordm;) at 870 &mu;m with a uniform sensitivity of a few solar masses at a distance of 1 kpc. It has a spatial resolution of 19&rdquo;. Its main sciences goals are to understand the early stages of high mass star formation, through a comprehensive analysis of pre/proto-stellar cores and young stellar objects. Compact source catalogs have also been produced from the continuum survey using the clump finding algorithms SExtractor and Gaussclumps."> <font color="#006699"> ATLASGAL </font> </a> </td>
+			<td> <font color="white"> F </font> <font color="#006699"> 870 𝝁m </font> </td>
+			<td name="Continuum (2D)"> <a href="https://dataverse.harvard.edu/dataset.xhtml?persistentId=doi:10.7910/DVN/GF23ME" title="This dataset consists of photometric maps covering 400 sq. deg. of the Galactic plane at 870 microns. All reduced and calibrated emission maps are available in 3x3 degree tiles at the ATLASGAL data bank." <font color="#006699"> &#9733; </font> </a> </td>
+			<td name="Spectral Line (3D)"> </td>
+			<td name="Source-Based Lists (1D)"> <a href="https://dataverse.harvard.edu/dataset.xhtml?persistentId=doi:10.7910/DVN/OFCYSM" title="This dataset consists of compact source catalogs produced from the 870 micron continuum survey using the clump finding algorithms SExtractor and Gaussclumps. The SExtractor derived catalog is outlined in Contreras et al. 2013 and consists of 6639 compact sources. The Gaussclumps derived catalog is outlined in Csengeri et al. 2014 and consists of 10861 compact sources. Both catalogs can be downloaded in full or queried via a cone search."> <font color="#006699"> &#9733; </font> </a> </td>
+			<td name="Spectral Line (2D)"> </td>
+		</tr>
+		<tr>
+			 
+			<td bgcolor="#0033FF"> 
+			<input id="JCMT" type="checkbox" checked="true" onchange="setVisible('JCMT');" name="foo" />
+			</td>
+			<td><a href="https://dataverse.harvard.edu/dataverse/JPS" title=""> <font color="#0033FF"> JCMT* </font> </a> </td>
+			<td> <font color="white"> G </font> <font color="#0033FF"> 850 𝝁m </font> </td>
+			<td name="Continuum (2D)"> <a href="https://dataverse.harvard.edu/dataset.xhtml?persistentId=doi:10.7910/DVN/UFLEHY" title="This dataset consists of extended 850 micron continuum observations taken by the SCUBA-2 instrument on the James Clerk Maxwell telescope. Future planned JCMT observations will also include 450um data. As of summer 2016, none of the Galactic plane data has been made public yet, but Moore et al. 2015 state that a public data release will accompany a future paper describing the complete survey."><font color="#0033FF"> &#9733; </font></a> </td>
+			<td name="Spectral Line (3D)"> </td>
+			<td name="Source-Based Lists (1D)"> <a href="https://dataverse.harvard.edu/dataset.xhtml?persistentId=doi:10.7910/DVN/EOMQGM" title="This dataset consists of a compact source catalog derived from the SCUBA-2 850 micron continuum observations. Using the FellWalker extraction method, 1000+ sources were detected above a 5&sigma; surface-brightness threshold. The flux densities derived are consistent with overlapping ATLASGAL 870 micron sources. As of Summer 2016, no JPS data has been made publicly available; a public data release of the JPS source catalog will accompany a future paper detailing results from the complete survey."><font color="#0033FF"> &#9733; </font></a> </td>
+			<td name="Spectral Line (2D)"> </td>
+			</font> 
+		</tr>
+		<tr>
+			<td bgcolor="#9966FF">
+			<input id="HIGAL" type="checkbox" checked="true" onchange="setVisible('HIGAL');" name="foo" />
+			</td>
+			<td> <a href="https://dataverse.harvard.edu/dataverse/HIGAL" title="The Herschel Infrared Galactic plane survey (Hi-GAL) is an unbiased photometric survey covering |b| &lt;= 1.0&deg;, 68 &gt; l &gt; -70&deg; in five passbands between 70 and 500 &mu;m. The nominal beam sizes range from 5-35" . its key science goals include understanding the distribution of the ism temperature, the formation of molecular clouds, the timeline of high-mass star formation, and the link between local and global star formation properties."> <font color="#9966FF"> HIGAL* </font> </a> </td>
+			<td> <font color="white"> H </font> <font color="#9966FF"> 70-500 𝝁m </font> </td>
+			<td name="Continuum (2D)"><a href="https://dataverse.harvard.edu/dataset.xhtml?persistentId=doi:10.7910/DVN/AGXXHR" title="This dataset consists of photometric maps at five wavelengths: 70, 160, 250, 350 and 500&mu;m, which combined cover the peak of the SED for dust temperatures between 8 &le; T &le; 50K. The first suite of Hi-GAL data was released in Spring 2016, covering 68&deg;&ge; l &ge; -70&deg; and |b| &le; 1&deg;, with more data to come in future. The public Hi-GAL DR1 data can be retrieved in 30x30 arcminute cutouts via the database"><font color="#9966FF"> &#9733; </font></a> </td>
+			<td name="Spectral Line (3D)"> </td>
+			<td name="Source-Based Lists (1D)"> </td>
+			<td name="Spectral Line (2D)"> </td>
+		</tr>
+		<tr>
+			<td bgcolor="#9999FF">
+			<input id="MIPSGAL" type="checkbox" checked="true" onchange="setVisible('MIPSGAL');" name="foo" />
+			</td>
+			<td> <a href="https://dataverse.harvard.edu/dataverse/MIPSGAL" title="The MIPSGAL survey covers 278 sq. deg of the inner Galactic Plane at 24 &mu;m (6&rdquo; resolution) and 70 &mu;m (18&rdquo; resolution). It is meant to act as a longer wavelength component to the Spitzer-GLIMPSE Survey of the Galactic plane. Its two main science goals are to 1) identify high mass protostars and 2) probe properties of interstellar dust in the inner galaxy."> <font color="#9999FF"> MIPSGAL </font> </a> </td>
+			<td> <font color="white"> Ha </font> <font color="#9999FF"> 24, 70 𝝁m </font> </td>
+			<td name="Continuum (2D)"><a href="https://dataverse.harvard.edu/dataset.xhtml?persistentId=doi:10.7910/DVN/BO5LL4" title="This dataset consists of 24 &amp; 70 micron maps covering latitudes -1&deg; &lt; b &lt; +1&deg; and longitudes l &lt; 69&deg; and l &gt; 292&deg;. Images are available for download via either an image cutout service ( here) or by downloading the tiles directly at a specified data download link ( here). In addition to the calibrated data, data products available include standard deviation mosaics, mask cubes, coverage maps, point source subtracted images, and completeness decay cubes."><font color="#9999FF"> &#9733; </font></a> </td>
+			<td name="Spectral Line (3D)"> </td>
+			<td name="Source-Based Lists (1D)"> </td>
+			<td name="Spectral Line (2D)"> </td>
+		</tr>
+		<tr>
+			<td bgcolor="#9999CC"> 
+			<div id="slider-opacity-wise">
+			</td>
+			<td> <a href="https://dataverse.harvard.edu/dataverse/WISE" title="The Wide-Field Infrared Survey Explorer (WISE) maps the entire sky at mid-infrared wavelengths--3.4, 4.6, 12, and 22 microns&mdash;corresponding to an angular resolution of 6.1, 6.4, 6.5, and 12&rdquo;. WISE achieves a 5&sigma; point source sensitivity of better than 0.08, 0.11, 1, and 6 mJy for bands 1-4, which corresponds to Vega magnitudes of 16.5, 15.5, 11.2, and 7.9, respectively."> <font color="#9999CC"> WISE </font> </a> </td>
+			<td> <font color="white"> Hb </font> <font color="#9999CC"> 3.4, 4.6, 12, 22.0 𝝁m </font> </td>
+			<td name="Continuum (2D)"><a href="https://dataverse.harvard.edu/dataset.xhtml?persistentId=doi:10.7910/DVN/HXAXM6" title="This dataset consists of mid-infrared photometric data in four bands (3.4, 4.6, 12, and 22 &micro;m) over the entire sky. The ALLWISE image atlas contains 18,000+ four band calibrated 1.5x1.5 degree fits files, in addition to depth-of-coverage and noise maps. These atlas images were created by coadding almost 8 million single-exposure images. Individual tiles can be retrieved and downloaded"><font color="#9999CC"> &#9733; </font></a> </td>
+			<td name="Spectral Line (3D)"> </td>
+			<td name="Source-Based Lists (1D)"> </td>
+			<td name="Spectral Line (2D)"> </td>
+		</tr>
+		<tr>
+			<td bgcolor="#FF0099">
+			<div id="slider-opacity">
+			</div>
+			</td>
+			<td> <a href="https://dataverse.harvard.edu/dataverse/GLIMPSE" title="The Galactic Legacy Infrared Mid-Plane Survey Extraordinaire (GLIMPSE) is composed of several individual surveys and together they provide almost complete longitudinal coverage of the Galactic plane at |b| &lt;= 1.0&deg;. Most of the plane is imaged at a spatial resolution of &lt;2&rdquo; at wavelengths of 3.6, 4.5, 5.8, and 8.0 &mu;m; however, certain longitudes in the outer Galaxy are only imaged in the 3.4 and 4.6 micron &mu;m passbands. "><font color="#FF0099"> GLIMPSE </font> </a> </td>
+			<td> <font color="white"> Hc </font> <font color="#FF0099"> 3.6, 4.5, 5.8, 8.0 𝝁m </font> </td>
+			<td name="Continuum (2D)"><a href="https://dataverse.harvard.edu/dataset.xhtml?persistentId=doi:10.7910/DVN/YOYSVK" title="This dataset consists of photometric maps at four wavelengths (3.6, 4.5, 5.8, and 8.0 &mu;m). The majority of the galactic plane is covered in all four bands, while a portion of the outer galaxy is only covered by the 3.6 and 4.5 micron bands. The data can be queried through a cutout service on the IRSA data archive. Alternatively, individual 3x2 degree fits tiles (and three-color pdfs) can be downloaded."><font color="#FF0099"> &#9733; </font> </a></td>
+			<td name="Spectral Line (3D)"> </td>
+			<td name="Source-Based Lists (1D)"> </td>
+			<td name="Spectral Line (2D)"> </td>
+		</tr>
+		<tr>
+			<td bgcolor="#990099"> 
+			<input id="UKIDSS" type="checkbox" checked="true" onchange="setVisible('UKIDSS');" name="foo" />
+			</td>
+			<td> <a href="https://dataverse.harvard.edu/dataverse/UKIDSS" title="The UKIRT Infrared Deep Sky Galactic Plane Survey (UKIDSS-GPS) is a near infrared survey which will map over 1800 square degrees of the Galactic plane in J,H,K bands (1-3 &mu;m) to a depth of 19 magnitudes. It is a successor to the 2MASS survey, probing 3 magnitudes deeper. The GPS plans to map half the plane over the following regions: 141&deg; &lt; l &lt; 230&deg;, &minus;5&deg; &lt; b &lt; 5&deg;; 15&deg; &lt; l &lt; 107&deg;, &minus;5&deg; &lt; b &lt; 5&deg;; &minus;2&deg; &lt; l &lt; 15&deg;, &minus;2&deg; &lt; b &lt; 2&deg;. The angular resolution of the GPS survey is 0.8&rdquo;, more than a factor of two better than both GLIMPSE and 2MASS."> <font color="#990099"> UKIDSS-GPS* </a> </font> </td>
+			<td> <font color="white"> I </font> <font color="#990099"> 1.3, 1.6, 2.2 𝝁m </font> </td>
+			<td name="Continuum (2D)"><a href="https://dataverse.harvard.edu/dataset.xhtml?persistentId=doi:10.7910/DVN/G43KCK" title="This dataset consists of near-infrared photometric maps (J, H, and K bands) in a wide strip covering all the first quadrant and sections of both the second and third quadrants. As of Summer 2016, the most recent publicly available data release is UKIDSS DR10, with more data to become available in future. The cutout service includes the option to extract both single band and multi-band colored images. All the data can be accessed through the WFCAM science archive."><font color="#990099"> &#9733; </font> </a></td>
+			<td name="Spectral Line (3D)"> </td>
+			<td name="Source-Based Lists (1D)"> </td>
+			<td name="Spectral Line (2D)"> </td>
+		</tr>
+		<tr>
+			<td bgcolor="#990033">
+			<input id="GPIPS" type="checkbox" checked="true" onchange="setVisible('GPIPS');" name="foo" />
+			</td>
+			<td> <a href="https://dataverse.harvard.edu/dataverse/GPIPS" title="The Galactic Plane Infrared Polarization Survey (GPIPS) covers 76 sq. deg in the Galactic midplane between 18&deg; &lt;= l &lt;= 56&deg; and -1&deg; &lt;= b &lt;= +1&deg;. It uses H-band (1.6 microns) linear polarimetry to determine magnetic field orientations in the plane of the sky near dense molecular clouds. The full GPIPS data set will contain almost 6 million stars, with about one million of those having high-quality photometry."> <font color="#990033"> GPIPS* </a> </font> </td>
+			<td> <font color="white"> J </font><a href="" title=""><font color="#990033"> 1.6 𝝁m </font> </td>
+			<td name="Continuum (2D)"> </td>
+			<td name="Spectral Line (3D)"> </td>
+			<td name="Source-Based Lists (1D)"><a href="https://dataverse.harvard.edu/dataset.xhtml?persistentId=doi:10.7910/DVN/QYVXUP" title="This dataset consists of 76 sq. deg. of H-band (1.6 &mu;m) linear polarimetry observations, which are able to reveal the plane-of-the-sky magnetic field orientations. Data products include 3237 overlapping 10 &times; 10 arcmin fields, which are downloadable in 1.7 GB zip files."><font color="#990033"> &#9733; </font> </a></td>
+			<td name="Spectral Line (2D)"> </td>
+		</tr>
+		</tbody>
+	</table>
+	<p>
+		<input id="toggle" type="checkbox" onchange="toggle(this)" />
+		Toggle All<br />
+	</p>
+	</p>
+	<p>
+		*Future data to be released 
+	</p>
+</div>
+</div>
+
+</body>
+</html>

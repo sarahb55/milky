@@ -1,0 +1,6 @@
+Project name = Dame_HEALPIX
+  input file=C:\Users\WWT Ambassador\Downloads\Dame_HEALPIX.png
+  width x height of original image = 4096 x 2048
+  width x height of scaled image   = 4096 x 2048
+  width x height of final image   = 4096 x 2048
+  (x,y) of scaled image's origin in final image = (0 , 0)
